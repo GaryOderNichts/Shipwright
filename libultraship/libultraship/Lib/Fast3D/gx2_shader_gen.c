@@ -43,14 +43,14 @@ static uint8_t get_reg(struct CCFeatures *cc_features, uint8_t c) {
 
     uint8_t input_last = (cc_features->num_inputs + 5) - 1;
 
-    // reuse tex coords for texels
     if (c == SHADER_TEXEL0 || c == SHADER_TEXEL0A) {
-        return _R1;
+        return _R(input_last + 1);
     }
     if (c == SHADER_TEXEL1 || c == SHADER_TEXEL1A) {
-        return _R2;
+        return _R(input_last + 2);
     }
 
+    // reuse texinfo for texels
     if (c == SHADER_TEXINFO0) {
         return _R(input_last + 1);
     }
@@ -58,33 +58,33 @@ static uint8_t get_reg(struct CCFeatures *cc_features, uint8_t c) {
         return _R(input_last + 2);
     }
 
-    // reuse texinfo for those
     if (c == SHADER_FILTER_TEX0_0) {
-        return get_reg(cc_features, SHADER_TEXINFO0);
-    }
-    if (c == SHADER_FILTER_TEX1_0) {
-        return get_reg(cc_features, SHADER_TEXINFO1);
-    }
-
-    if (c == SHADER_FILTER_TEX0_1) {
         return _R(input_last + 3);
     }
-    if (c == SHADER_FILTER_TEX1_1) {
+    if (c == SHADER_FILTER_TEX1_0) {
         return _R(input_last + 4);
     }
 
+    if (c == SHADER_FILTER_TEX0_1) {
+        return _R(input_last + 5);
+    }
+    if (c == SHADER_FILTER_TEX1_1) {
+        return _R(input_last + 6);
+    }
+
+    // we can reuse texinfo for the last texels
     if (c == SHADER_FILTER_TEX0_2) {
-        return _R1;
+        return _R(input_last + 1);
     }
     if (c == SHADER_FILTER_TEX1_2) {
-        return _R2;
+        return _R(input_last + 2);
     }
 
     if (c == SHADER_FILTER_OFF0) {
-        return _R(input_last + 5);
+        return _R(input_last + 7);
     }
     if (c == SHADER_FILTER_OFF1) {
-        return _R(input_last + 6);
+        return _R(input_last + 8);
     }
 
     return 0;
@@ -94,7 +94,7 @@ static uint8_t get_num_regs(struct CCFeatures *cc_features, BOOL three_point_fil
     uint8_t input_count = cc_features->num_inputs + 5;
 
     if (three_point_filtering) {
-        return input_count + 6;
+        return input_count + 8;
     }
 
     return input_count + 2;
