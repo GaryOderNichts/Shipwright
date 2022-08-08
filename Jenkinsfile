@@ -35,7 +35,6 @@ pipeline {
                             
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                             bat """ 
-
                             xcopy "..\\..\\ZELOOTD.z64" "OTRExporter\\"
                             
                             "${env.CMAKE}" -S . -B "build\\${env.PLATFORM}" -G "Visual Studio 17 2022" -T ${env.TOOLSET} -A ${env.PLATFORM} -D Python3_EXECUTABLE=${env.PYTHON} -D CMAKE_BUILD_TYPE:STRING=Release
@@ -44,7 +43,6 @@ pipeline {
                             cd  ".\\build\\${env.PLATFORM}"
                             "${env.CPACK}" -G ZIP
                             cd "..\\..\\"
-
                             move "_packages\\*.zip" "soh.zip"
                             """
                             archiveArtifacts artifacts: 'soh.zip', followSymlinks: false, onlyIfSuccessful: true
@@ -81,7 +79,6 @@ pipeline {
                             
                             mv README.md readme.txt
                             mv build-cmake/*.appimage soh.appimage
-
                             7z a soh-linux.7z soh.appimage readme.txt
                             
                             '''
@@ -110,12 +107,10 @@ pipeline {
                         catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                             sh '''
                             cp ../../ZELOOTD.z64 OTRExporter/baserom_non_mq.z64
-
                             cmake --no-warn-unused-cli -H. -Bbuild-cmake -GNinja -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
                             cmake --build build-cmake --target ExtractAssets --
                             cmake --build build-cmake --config Release --
                             (cd build-cmake && cpack)
-
                             mv README.md readme.txt		
                             mv _packages/*.dmg SoH.dmg
                             
@@ -170,7 +165,46 @@ pipeline {
                     }
                 }
             }
+            stage ('Build WiiU') {
+                    options {
+                        timeout(time: 20)
+                    }
+                    agent {
+                        label "SoH-Linux-Builders"
+                    }
+                    steps {
+                        checkout([
+                            $class: 'GitSCM',
+                            branches: scm.branches,
+                            doGenerateSubmoduleConfigurations: scm.doGenerateSubmoduleConfigurations,
+                            extensions: scm.extensions,
+                            userRemoteConfigs: scm.userRemoteConfigs
+                        ])
+                        catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                            sh '''
+                            
+                            cp ../../ZELOOTD.z64 OTRExporter/baserom_non_mq.z64
+                            docker build . -t sohwiiu
+                            docker run --name sohwiiucont -dit --rm -v $(pwd):/soh sohwiiu /bin/bash
+                            docker exec sohwiiucont scripts/wiiu/build.sh
+                            
+                            mv build-wiiu/soh/*.rpx soh.rpx
+                            mv README.md readme.txt
+                            
+                            7z a soh-wiiu.7z soh.rpx readme.txt
+                            
+                            '''
+                        }
+                        sh 'sudo docker container stop sohwiiucont'
+                        archiveArtifacts artifacts: 'soh-wiiu.7z', followSymlinks: false, onlyIfSuccessful: true
+                    }
+                    post {
+                        always {
+                            step([$class: 'WsCleanup']) // Clean workspace
+                        }
+                    }
+                }
+            }
         }
     }
 }
-
